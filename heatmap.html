@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Top 20 Encampment Sites — Seattle</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #2C2C2A;
+    background: transparent;
+    padding: 24px;
+  }
+  main { max-width: 1400px; margin: 0 auto; }
+  header { margin-bottom: 18px; }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2C2C2A;
+    letter-spacing: -0.005em;
+  }
+  .subhead {
+    margin: 0;
+    font-size: 12px;
+    color: #5F5E5A;
+  }
+
+  /* Horizontal scroll wrapper for narrow viewports */
+  .scroll-wrap {
+    overflow-x: auto;
+    margin: 0 -24px;
+    padding: 0 24px 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #heatmap {
+    display: grid;
+    grid-template-columns: 240px 60px repeat(5, minmax(80px, 1fr));
+    gap: 2px;
+    min-width: 720px;
+  }
+
+  .cell {
+    padding: 10px 12px;
+    font-size: 12px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Header row */
+  .h {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #5F5E5A;
+    font-weight: 500;
+    padding: 6px 12px 10px;
+    background: transparent;
+    border-bottom: 1px solid #E8E6DD;
+  }
+  .h-label   { justify-content: flex-start; }
+  .h-reports { justify-content: flex-end; }
+  .h-util    { justify-content: center; }
+
+  /* Label + Reports cells */
+  .label-cell {
+    background: #F5F4EE;
+    color: #2C2C2A;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .rank { color: #888780; font-variant-numeric: tabular-nums; }
+  .name { color: #2C2C2A; }
+  .reports-cell {
+    background: #F5F4EE;
+    color: #2C2C2A;
+    justify-content: flex-end;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+
+  /* Utility (distance) cells */
+  .util-cell {
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    cursor: default;
+    transition: filter 120ms ease;
+  }
+
+  /* CSS-only tooltip on utility cells */
+  .util-cell[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2C2C2A;
+    color: #F5F4EE;
+    padding: 5px 9px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 20;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .util-cell[data-tip]:hover::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 1px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #2C2C2A;
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  /* Row hover effect — added to every cell sharing the same data-row */
+  .cell.row-hover {
+    filter: brightness(1.06);
+    box-shadow: inset 0 0 0 1px rgba(44,44,42,0.12);
+  }
+
+  /* Legend */
+  .legend {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: #5F5E5A;
+    flex-wrap: wrap;
+  }
+  .legend .grad {
+    flex: 1 1 220px;
+    height: 10px;
+    border-radius: 2px;
+    background: linear-gradient(to right,
+      #293B36 0%, #37534B 12%, #466D62 25%, #559180 40%,
+      #78B0A0 58%, #A8C7BE 75%, #D0DDD9 88%, #E8EDEC 100%);
+    min-width: 160px;
+  }
+  .legend .hint {
+    color: #888780;
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Footnote */
+  .footnote {
+    margin: 16px 0 0;
+    font-size: 12px;
+    color: #5F5E5A;
+    max-width: 780px;
+    line-height: 1.55;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 16px; }
+    .scroll-wrap { margin: 0 -16px; padding: 0 16px 4px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="scroll-wrap">
+    <div id="heatmap" role="table"
+         aria-label="Top 20 encampment sites and their distance in meters to nearest transit, food, park, shelter, and restroom"></div>
+  </div>
+
+  <div class="legend" aria-hidden="true">
+    <span>Closer</span>
+    <div class="grad"></div>
+    <span>Farther</span>
+    <span class="hint">0 → 2,000m+</span>
+  </div>
+
+</main>
+
+<script>
+const sites = [
+  { rank: 1,  label: "Capitol Hill — Boylston Ave E",     reports: 1322, Transit: 161, Food: 230, Park: 13,  Shelter: 773,  Restroom: 682  },
+  { rank: 2,  label: "Olympic Hills — Lake City Way NE",  reports: 1286, Transit: 28,  Food: 148, Park: 0,   Shelter: 505,  Restroom: 1412 },
+  { rank: 3,  label: "Capitol Hill — Federal Ave E",      reports: 1104, Transit: 127, Food: 115, Park: 367, Shelter: 861,  Restroom: 758  },
+  { rank: 4,  label: "Belltown — 2nd Ave",                reports: 1035, Transit: 88,  Food: 155, Park: 223, Shelter: 143,  Restroom: 657  },
+  { rank: 5,  label: "Greenwood — N 87th St",             reports: 821,  Transit: 173, Food: 545, Park: 328, Shelter: 3270, Restroom: 377  },
+  { rank: 6,  label: "Capitol Hill — University St",      reports: 807,  Transit: 78,  Food: 262, Park: 5,   Shelter: 573,  Restroom: 693  },
+  { rank: 7,  label: "North Delridge — 35th Ave SW",      reports: 766,  Transit: 94,  Food: 833, Park: 86,  Shelter: 4443, Restroom: 530  },
+  { rank: 8,  label: "Olympic Hills — 27th Ave NE",       reports: 681,  Transit: 83,  Food: 54,  Park: 12,  Shelter: 731,  Restroom: 1553 },
+  { rank: 9,  label: "Ballard — NW 50th St",              reports: 667,  Transit: 112, Food: 369, Park: 557, Shelter: 217,  Restroom: 759  },
+  { rank: 10, label: "Capitol Hill — Summit Ave E",       reports: 592,  Transit: 49,  Food: 448, Park: 21,  Shelter: 304,  Restroom: 564  },
+  { rank: 11, label: "Central Area — E Howell St",        reports: 591,  Transit: 85,  Food: 259, Park: 60,  Shelter: 1003, Restroom: 560  },
+  { rank: 12, label: "Ballard — 22nd Ave NW",             reports: 578,  Transit: 144, Food: 105, Park: 12,  Shelter: 588,  Restroom: 47   },
+  { rank: 13, label: "Ballard — 8th Ave NW",              reports: 555,  Transit: 120, Food: 746, Park: 392, Shelter: 1293, Restroom: 381  },
+  { rank: 14, label: "Capitol Hill — Bellevue Ave E",     reports: 508,  Transit: 57,  Food: 445, Park: 1,   Shelter: 443,  Restroom: 435  },
+  { rank: 15, label: "Queen Anne — Roy St",               reports: 500,  Transit: 83,  Food: 665, Park: 242, Shelter: 748,  Restroom: 1237 },
+  { rank: 16, label: "North Beacon Hill — Sturgus Ave S", reports: 465,  Transit: 206, Food: 487, Park: 12,  Shelter: 632,  Restroom: 652  },
+  { rank: 17, label: "Whittier Heights — Mary Ave NW",    reports: 458,  Transit: 82,  Food: 564, Park: 42,  Shelter: 2577, Restroom: 817  },
+  { rank: 18, label: "Pioneer Square — S Main St",        reports: 406,  Transit: 143, Food: 177, Park: 147, Shelter: 410,  Restroom: 932  },
+  { rank: 19, label: "Queen Anne — Queen Anne Ave N",     reports: 400,  Transit: 62,  Food: 404, Park: 246, Shelter: 84,   Restroom: 877  },
+  { rank: 20, label: "Queen Anne — Roy St (E)",           reports: 394,  Transit: 100, Food: 589, Park: 3,   Shelter: 260,  Restroom: 832  },
+];
+
+const UTILS = ["Transit", "Food", "Park", "Shelter", "Restroom"];
+
+// 8-bucket scale built from base #293B36 (hue ~163, sat ~18, lightness ~20).
+// Each step lifts lightness; saturation peaks mid-scale and tapers at the light end.
+function colorFor(m) {
+  if (m < 100)  return "#293B36";  // base
+  if (m < 200)  return "#37534B";
+  if (m < 400)  return "#466D62";
+  if (m < 600)  return "#559180";
+  if (m < 1000) return "#78B0A0";
+  if (m < 1500) return "#A8C7BE";
+  if (m < 2500) return "#D0DDD9";
+  return "#E8EDEC";
+}
+// Light text on the three darkest buckets; near-black on the rest (all pass WCAG AA).
+function textColorFor(m) { return m < 400 ? "#E8EDEC" : "#0A1612"; }
+function formatDistance(m) {
+  if (m < 1000) return m + " m";
+  return (m / 1000).toFixed(1) + " km";
+}
+
+const grid = document.getElementById("heatmap");
+
+// Header row
+function makeHeader(text, cls) {
+  const el = document.createElement("div");
+  el.className = "cell h " + cls;
+  el.setAttribute("role", "columnheader");
+  el.textContent = text;
+  return el;
+}
+grid.append(
+  makeHeader("Site",    "h-label"),
+  makeHeader("Reports", "h-reports"),
+  ...UTILS.map(u => makeHeader(u, "h-util"))
+);
+
+// Data rows
+sites.forEach((s, i) => {
+  const rowId = "r" + i;
+
+  const labelCell = document.createElement("div");
+  labelCell.className = "cell label-cell";
+  labelCell.dataset.row = rowId;
+  labelCell.setAttribute("role", "cell");
+  labelCell.innerHTML =
+    '<span class="rank">' + String(s.rank).padStart(2, "0") + '</span>' +
+    '<span class="name">' + s.label + '</span>';
+  grid.appendChild(labelCell);
+
+  const reportsCell = document.createElement("div");
+  reportsCell.className = "cell reports-cell";
+  reportsCell.dataset.row = rowId;
+  reportsCell.setAttribute("role", "cell");
+  reportsCell.textContent = s.reports.toLocaleString();
+  grid.appendChild(reportsCell);
+
+  UTILS.forEach(u => {
+    const m = s[u];
+    const cell = document.createElement("div");
+    cell.className = "cell util-cell";
+    cell.dataset.row = rowId;
+    cell.style.background = colorFor(m);
+    cell.style.color = textColorFor(m);
+    cell.setAttribute("role", "cell");
+    cell.setAttribute("data-tip", u + ": " + formatDistance(m));
+    cell.textContent = formatDistance(m);
+    grid.appendChild(cell);
+  });
+});
+
+// Row-hover behavior (cells in the same row gain .row-hover class together)
+grid.addEventListener("mouseover", e => {
+  const cell = e.target.closest(".cell[data-row]");
+  if (!cell) return;
+  const row = cell.dataset.row;
+  grid.querySelectorAll('.cell[data-row="' + row + '"]').forEach(c => c.classList.add("row-hover"));
+});
+grid.addEventListener("mouseout", e => {
+  const cell = e.target.closest(".cell[data-row]");
+  if (!cell) return;
+  const row = cell.dataset.row;
+  grid.querySelectorAll('.cell[data-row="' + row + '"]').forEach(c => c.classList.remove("row-hover"));
+});
+</script>
+</body>
+</html>
