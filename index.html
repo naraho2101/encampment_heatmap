@@ -86,6 +86,7 @@
     font-variant-numeric: tabular-nums;
     position: relative;
     cursor: default;
+    white-space: nowrap;
     transition: filter 120ms ease;
   }
 
@@ -171,29 +172,31 @@ const sites = [
 
 const UTILS = ["Transit", "Park", "Food", "Shelter"];
 
-// Walking time: 80 m/min (≈4.8 km/h) -> 3 min = 240 m, 5 min = 400 m, 15 min = 1200 m.
-const WALK_M_PER_MIN = 80;
+// Walking pace rule of thumb: 1 mile = 20 minutes (3 mph) -> 80.47 m/min ≈ 1.341 m/s.
+// Buckets by walk time: 3 min ≈ 0.15 mi, 5 min ≈ 0.25 mi, 15 min ≈ 0.75 mi.
+const WALK_M_PER_MIN = 1609.344 / 20;
 const TIME_BUCKETS = [
-  { max: 240,      color: "#293B36", label: "&lt; 3 min walk" },  // closest, darkest
-  { max: 400,      color: "#4F7C6B", label: "3–5 min" },
-  { max: 1200,     color: "#8FBCAC", label: "5–15 min" },
-  { max: Infinity, color: "#D7E2DC", label: "&gt; 15 min" },      // farthest, lightest
+  { max: 3 * WALK_M_PER_MIN,  color: "#293B36", label: "&lt; 3 min walk" },  // closest, darkest
+  { max: 5 * WALK_M_PER_MIN,  color: "#4F7C6B", label: "3–5 min" },
+  { max: 15 * WALK_M_PER_MIN, color: "#8FBCAC", label: "5–15 min" },
+  { max: Infinity,            color: "#D7E2DC", label: "&gt; 15 min" },      // farthest, lightest
 ];
 function colorFor(m) {
   for (const b of TIME_BUCKETS) if (m < b.max) return b.color;
   return TIME_BUCKETS[TIME_BUCKETS.length - 1].color;
 }
 // Light text on the two darkest buckets (< 5 min), near-black on the two lightest.
-function textColorFor(m) { return m < 400 ? "#E8EDEC" : "#0A1612"; }
-function formatTime(m) {
-  const mins = Math.round(m / WALK_M_PER_MIN);
-  return mins < 1 ? "<1 min" : mins + " min";
-}
-// Exact distance for the hover tooltip: feet under 1/4 mile, miles (2 dp) above.
+function textColorFor(m) { return m < 5 * WALK_M_PER_MIN ? "#E8EDEC" : "#0A1612"; }
+
+// Cell text: distance in feet (under 1/4 mile) or miles (2 dp).
 function formatDistance(m) {
   const ft = m * 3.28084;
   if (ft < 1320) return Math.round(ft / 10) * 10 + " ft";
   return (m / 1609.344).toFixed(2) + " mi";
+}
+// Cell text: walk time in decimal minutes (trailing ".0" trimmed).
+function formatTime(m) {
+  return parseFloat((m / WALK_M_PER_MIN).toFixed(1)) + " min";
 }
 
 const grid = document.getElementById("heatmap");
@@ -259,7 +262,7 @@ function render() {
       cell.style.background = colorFor(m);
       cell.style.color = textColorFor(m);
       cell.setAttribute("role", "cell");
-      cell.dataset.dist = u + ": " + formatDistance(m);   // exact distance for hover tooltip
+      cell.dataset.tip = formatDistance(m);   // exact distance for hover tooltip
       cell.textContent = formatTime(m);
       grid.appendChild(cell);
     });
@@ -289,9 +292,9 @@ const tip = document.createElement("div");
 tip.className = "tip";
 document.body.appendChild(tip);
 grid.addEventListener("mousemove", e => {
-  const cell = e.target.closest(".util-cell[data-dist]");
+  const cell = e.target.closest(".util-cell[data-tip]");
   if (cell) {
-    tip.textContent = cell.dataset.dist;
+    tip.textContent = cell.dataset.tip;
     tip.style.left = e.clientX + "px";
     tip.style.top = (e.clientY - 10) + "px";
     tip.style.opacity = "1";
