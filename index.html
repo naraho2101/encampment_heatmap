@@ -29,9 +29,15 @@
 
   #heatmap {
     display: grid;
-    grid-template-columns: 240px 60px repeat(4, minmax(80px, 1fr));
+    grid-template-columns: 240px 88px repeat(4, minmax(80px, 1fr));
     gap: 2px;
-    min-width: 640px;
+    min-width: 660px;
+  }
+
+  .hint {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
   }
 
   .cell {
@@ -58,7 +64,10 @@
     gap: 4px;
   }
   .h:hover { color: #B6C688; }
+  .h.col-sorted { color: #B6C688; }
   .h .arrow { font-size: 9px; opacity: 0.9; }
+  .util-cell.col-sorted { outline: 1px solid rgba(182,198,136,0.45); outline-offset: -1px; }
+  .label-cell.col-sorted, .reports-cell.col-sorted { outline: 1px solid rgba(182,198,136,0.45); outline-offset: -1px; }
   .h-label   { justify-content: flex-start; }
   .h-reports { justify-content: flex-end; }
   .h-util    { justify-content: center; }
@@ -139,6 +148,7 @@
 </head>
 <body>
 <main>
+  <p class="hint">Click any column header to sort ↑↓</p>
   <div class="scroll-wrap">
     <div id="heatmap" role="table"
          aria-label="Top 20 encampment sites and their walking time to nearest transit, park, food resource, and shelter. Click a column header to sort."></div>
@@ -176,17 +186,17 @@ const UTILS = ["Transit", "Park", "Food", "Shelter"];
 // Buckets by walk time: 3 min ≈ 0.15 mi, 5 min ≈ 0.25 mi, 15 min ≈ 0.75 mi.
 const WALK_M_PER_MIN = 1609.344 / 20;
 const TIME_BUCKETS = [
-  { max: 3 * WALK_M_PER_MIN,  color: "#293B36", label: "&lt; 3 min walk" },  // closest, darkest
-  { max: 5 * WALK_M_PER_MIN,  color: "#4F7C6B", label: "3–5 min" },
-  { max: 15 * WALK_M_PER_MIN, color: "#8FBCAC", label: "5–15 min" },
-  { max: Infinity,            color: "#D7E2DC", label: "&gt; 15 min" },      // farthest, lightest
+  { max: 3  * WALK_M_PER_MIN, color: "#293B36", label: "&lt; 3 min" },   // closest, darkest
+  { max: 10 * WALK_M_PER_MIN, color: "#4F7C6B", label: "3–10 min" },
+  { max: 20 * WALK_M_PER_MIN, color: "#8FBCAC", label: "10–20 min" },
+  { max: Infinity,            color: "#D7E2DC", label: "&gt; 20 min" },   // farthest, lightest
 ];
 function colorFor(m) {
   for (const b of TIME_BUCKETS) if (m < b.max) return b.color;
   return TIME_BUCKETS[TIME_BUCKETS.length - 1].color;
 }
-// Light text on the two darkest buckets (< 5 min), near-black on the two lightest.
-function textColorFor(m) { return m < 5 * WALK_M_PER_MIN ? "#E8EDEC" : "#0A1612"; }
+// Light text on the two darkest buckets (< 10 min), near-black on the two lightest.
+function textColorFor(m) { return m < 10 * WALK_M_PER_MIN ? "#E8EDEC" : "#0A1612"; }
 
 // Cell text: distance in feet (under 1/4 mile) or miles (2 dp).
 function formatDistance(m) {
@@ -218,7 +228,7 @@ function sortedSites() {
 
 function makeHeader(text, cls, key) {
   const el = document.createElement("div");
-  el.className = "cell h " + cls;
+  el.className = "cell h " + cls + (sortKey === key ? " col-sorted" : "");
   el.setAttribute("role", "columnheader");
   el.innerHTML = text + (sortKey === key ? ` <span class="arrow">${sortDir === -1 ? "▼" : "▲"}</span>` : "");
   el.addEventListener("click", () => {
@@ -239,7 +249,7 @@ function render() {
     const rowId = "r" + i;
 
     const labelCell = document.createElement("div");
-    labelCell.className = "cell label-cell";
+    labelCell.className = "cell label-cell" + (sortKey === "label" ? " col-sorted" : "");
     labelCell.dataset.row = rowId;
     labelCell.setAttribute("role", "cell");
     labelCell.innerHTML =
@@ -248,7 +258,7 @@ function render() {
     grid.appendChild(labelCell);
 
     const reportsCell = document.createElement("div");
-    reportsCell.className = "cell reports-cell";
+    reportsCell.className = "cell reports-cell" + (sortKey === "reports" ? " col-sorted" : "");
     reportsCell.dataset.row = rowId;
     reportsCell.setAttribute("role", "cell");
     reportsCell.textContent = s.reports.toLocaleString();
@@ -257,7 +267,7 @@ function render() {
     UTILS.forEach(u => {
       const m = s[u];
       const cell = document.createElement("div");
-      cell.className = "cell util-cell";
+      cell.className = "cell util-cell" + (sortKey === u ? " col-sorted" : "");
       cell.dataset.row = rowId;
       cell.style.background = colorFor(m);
       cell.style.color = textColorFor(m);
