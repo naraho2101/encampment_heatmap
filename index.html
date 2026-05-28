@@ -138,26 +138,26 @@
 
 <script>
 const sites = [
-  { rank: 1,  label: "Capitol Hill — Boylston Ave E",     reports: 1322, Transit: 161, Food: 230, Park: 13,  Shelter: 773,  Restroom: 682  },
-  { rank: 2,  label: "Olympic Hills — Lake City Way NE",  reports: 1286, Transit: 28,  Food: 148, Park: 0,   Shelter: 505,  Restroom: 1412 },
-  { rank: 3,  label: "Capitol Hill — Federal Ave E",      reports: 1104, Transit: 127, Food: 115, Park: 367, Shelter: 861,  Restroom: 758  },
-  { rank: 4,  label: "Belltown — 2nd Ave",                reports: 1035, Transit: 88,  Food: 155, Park: 223, Shelter: 143,  Restroom: 657  },
-  { rank: 5,  label: "Greenwood — N 87th St",             reports: 821,  Transit: 173, Food: 545, Park: 328, Shelter: 3270, Restroom: 377  },
-  { rank: 6,  label: "Capitol Hill — University St",      reports: 807,  Transit: 78,  Food: 262, Park: 5,   Shelter: 573,  Restroom: 693  },
-  { rank: 7,  label: "North Delridge — 35th Ave SW",      reports: 766,  Transit: 94,  Food: 833, Park: 86,  Shelter: 4443, Restroom: 530  },
-  { rank: 8,  label: "Olympic Hills — 27th Ave NE",       reports: 681,  Transit: 83,  Food: 54,  Park: 12,  Shelter: 731,  Restroom: 1553 },
-  { rank: 9,  label: "Ballard — NW 50th St",              reports: 667,  Transit: 112, Food: 369, Park: 557, Shelter: 217,  Restroom: 759  },
-  { rank: 10, label: "Capitol Hill — Summit Ave E",       reports: 592,  Transit: 49,  Food: 448, Park: 21,  Shelter: 304,  Restroom: 564  },
-  { rank: 11, label: "Central Area — E Howell St",        reports: 591,  Transit: 85,  Food: 259, Park: 60,  Shelter: 1003, Restroom: 560  },
-  { rank: 12, label: "Ballard — 22nd Ave NW",             reports: 578,  Transit: 144, Food: 105, Park: 12,  Shelter: 588,  Restroom: 47   },
-  { rank: 13, label: "Ballard — 8th Ave NW",              reports: 555,  Transit: 120, Food: 746, Park: 392, Shelter: 1293, Restroom: 381  },
-  { rank: 14, label: "Capitol Hill — Bellevue Ave E",     reports: 508,  Transit: 57,  Food: 445, Park: 1,   Shelter: 443,  Restroom: 435  },
-  { rank: 15, label: "Queen Anne — Roy St",               reports: 500,  Transit: 83,  Food: 665, Park: 242, Shelter: 748,  Restroom: 1237 },
-  { rank: 16, label: "North Beacon Hill — Sturgus Ave S", reports: 465,  Transit: 206, Food: 487, Park: 12,  Shelter: 632,  Restroom: 652  },
-  { rank: 17, label: "Whittier Heights — Mary Ave NW",    reports: 458,  Transit: 82,  Food: 564, Park: 42,  Shelter: 2577, Restroom: 817  },
-  { rank: 18, label: "Pioneer Square — S Main St",        reports: 406,  Transit: 143, Food: 177, Park: 147, Shelter: 410,  Restroom: 932  },
-  { rank: 19, label: "Queen Anne — Queen Anne Ave N",     reports: 400,  Transit: 62,  Food: 404, Park: 246, Shelter: 84,   Restroom: 877  },
-  { rank: 20, label: "Queen Anne — Roy St (E)",           reports: 394,  Transit: 100, Food: 589, Park: 3,   Shelter: 260,  Restroom: 832  },
+  { rank: 1,  label: "Capitol Hill — Broadway E",          reports: 6627, Transit: 70,  Food: 25,  Park: 212, Shelter: 800  },
+  { rank: 2,  label: "Belltown — 2nd Ave",                 reports: 5817, Transit: 67,  Food: 128, Park: 99,  Shelter: 167  },
+  { rank: 3,  label: "Ballard — NW Leary Way",             reports: 5240, Transit: 7,   Food: 207, Park: 369, Shelter: 738  },
+  { rank: 4,  label: "Capitol Hill — 11th Ave",            reports: 5177, Transit: 249, Food: 490, Park: 113, Shelter: 583  },
+  { rank: 5,  label: "Olympic Hills — NE 125th St",        reports: 4758, Transit: 13,  Food: 77,  Park: 90,  Shelter: 699  },
+  { rank: 6,  label: "Ballard — NW 51st St",               reports: 4734, Transit: 209, Food: 311, Park: 606, Shelter: 237  },
+  { rank: 7,  label: "Ballard — 22nd Ave NW",              reports: 4286, Transit: 77,  Food: 192, Park: 116, Shelter: 468  },
+  { rank: 8,  label: "Ballard — NW Market St",             reports: 4246, Transit: 36,  Food: 538, Park: 159, Shelter: 687  },
+  { rank: 9,  label: "Pioneer Square — Occidental Ave S",  reports: 3834, Transit: 84,  Food: 107, Park: 71,  Shelter: 65   },
+  { rank: 10, label: "Central Area — 17th Ave",            reports: 3825, Transit: 110, Food: 164, Park: 207, Shelter: 823  },
+  { rank: 11, label: "Queen Anne — Mercer St",             reports: 3340, Transit: 38,  Food: 450, Park: 144, Shelter: 167  },
+  { rank: 12, label: "Licton Springs — Aurora Ave N",      reports: 3258, Transit: 128, Food: 186, Park: 507, Shelter: 3430 },
+  { rank: 13, label: "Fremont — NW 44th St",               reports: 3093, Transit: 62,  Food: 704, Park: 366, Shelter: 1248 },
+  { rank: 14, label: "Greenwood — NW 87th St",             reports: 3082, Transit: 181, Food: 717, Park: 330, Shelter: 3187 },
+  { rank: 15, label: "First Hill — Boylston Ave",          reports: 2822, Transit: 35,  Food: 315, Park: 197, Shelter: 545  },
+  { rank: 16, label: "Mt. Baker — S Hill St",              reports: 2814, Transit: 62,  Food: 172, Park: 342, Shelter: 1673 },
+  { rank: 17, label: "Green Lake — 8th Ave NE",            reports: 2736, Transit: 64,  Food: 85,  Park: 544, Shelter: 1410 },
+  { rank: 18, label: "Broadview — Aurora Ave N",           reports: 2669, Transit: 189, Food: 401, Park: 434, Shelter: 294  },
+  { rank: 19, label: "Capitol Hill — Bellevue Ave E",      reports: 2632, Transit: 52,  Food: 321, Park: 122, Shelter: 224  },
+  { rank: 20, label: "North Beacon Hill — 15th Ave S",     reports: 2427, Transit: 70,  Food: 694, Park: 21,  Shelter: 457  },
 ];
 
 const UTILS = ["Transit", "Park", "Food", "Shelter"];
@@ -175,11 +175,14 @@ function colorFor(m) {
 }
 // Light text on the three darkest buckets; near-black on the rest (WCAG AA on every cell).
 function textColorFor(m) { return m < 400 ? "#E8EDEC" : "#0A1612"; }
-// Imperial display. Under a mile -> feet (with commas); else miles, 1 decimal.
-function formatDistance(m) {
-  const ft = m * 3.28084;
-  if (ft < 5280) return Math.round(ft).toLocaleString() + " ft";
-  return (ft / 5280).toFixed(1) + " mi";
+const M_PER_FT = 0.3048;
+const M_PER_MI = 1609.344;
+function formatDistance(meters) {
+  const miles = meters / M_PER_MI;
+  if (miles < 0.1) {
+    return `${Math.round((meters / M_PER_FT) / 10) * 10} ft`;
+  }
+  return `${(Math.ceil(miles * 10) / 10).toFixed(1)} mi`;
 }
 
 const grid = document.getElementById("heatmap");
