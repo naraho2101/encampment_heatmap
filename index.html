@@ -42,7 +42,7 @@
     align-items: center;
   }
 
-  /* Header row — all white */
+  /* Header row — sortable */
   .h {
     font-size: 11px;
     text-transform: uppercase;
@@ -52,7 +52,13 @@
     padding: 6px 12px 10px;
     background: transparent;
     border-bottom: 1px solid rgba(255,255,255,0.18);
+    cursor: pointer;
+    user-select: none;
+    transition: color 120ms ease;
+    gap: 4px;
   }
+  .h:hover { color: #B6C688; }
+  .h .arrow { font-size: 9px; opacity: 0.9; }
   .h-label   { justify-content: flex-start; }
   .h-reports { justify-content: flex-end; }
   .h-util    { justify-content: center; }
@@ -74,7 +80,7 @@
     font-weight: 500;
   }
 
-  /* Utility (distance) cells */
+  /* Utility (walking-time) cells */
   .util-cell {
     justify-content: center;
     font-variant-numeric: tabular-nums;
@@ -83,36 +89,45 @@
     transition: filter 120ms ease;
   }
 
-  /* Row hover — added to every cell sharing the same data-row */
+  /* Row hover */
   .cell.row-hover {
     filter: brightness(1.10);
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
   }
 
-  /* Legend */
+  /* Floating tooltip showing the exact distance (fixed-positioned, never clipped) */
+  .tip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1000;
+    background: #FFFFFF;
+    color: #151918;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    transform: translate(-50%, -100%);
+    opacity: 0;
+    transition: opacity 100ms ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+
+  /* Legend — 4 discrete walking-time buckets */
   .legend {
     margin-top: 18px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 18px;
     font-size: 11px;
     color: #FFFFFF;
     flex-wrap: wrap;
   }
-  .legend .grad {
-    flex: 1 1 220px;
-    height: 10px;
-    border-radius: 2px;
-    background: linear-gradient(to right,
-      #293B36 0%, #37534B 12%, #466D62 25%, #559180 40%,
-      #78B0A0 58%, #A8C7BE 75%, #D0DDD9 88%, #E8EDEC 100%);
-    min-width: 160px;
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  .legend .hint {
-    color: rgba(255,255,255,0.6);
-    margin-left: 4px;
-    font-variant-numeric: tabular-nums;
+  .legend .key { display: flex; align-items: center; gap: 7px; }
+  .legend i {
+    width: 18px; height: 12px; display: inline-block; border-radius: 2px;
+    border: 1px solid rgba(0,0,0,0.25);
   }
 
   @media (max-width: 600px) {
@@ -125,15 +140,9 @@
 <main>
   <div class="scroll-wrap">
     <div id="heatmap" role="table"
-         aria-label="Top 20 encampment sites and their walking distance to nearest transit, park, food resource, and shelter"></div>
+         aria-label="Top 20 encampment sites and their walking time to nearest transit, park, food resource, and shelter. Click a column header to sort."></div>
   </div>
-
-  <div class="legend" aria-hidden="true">
-    <span>Closer</span>
-    <div class="grad"></div>
-    <span>Farther</span>
-    <span class="hint">0 → 1.5 mi+</span>
-  </div>
+  <div class="legend" id="legend" aria-hidden="true"></div>
 </main>
 
 <script>
@@ -162,89 +171,135 @@ const sites = [
 
 const UTILS = ["Transit", "Park", "Food", "Shelter"];
 
-// 8-bucket scale anchored on base #293B36 — lifts from dark teal to pale mist.
+// Walking time: 80 m/min (≈4.8 km/h) -> 3 min = 240 m, 5 min = 400 m, 15 min = 1200 m.
+const WALK_M_PER_MIN = 80;
+const TIME_BUCKETS = [
+  { max: 240,      color: "#293B36", label: "&lt; 3 min walk" },  // closest, darkest
+  { max: 400,      color: "#4F7C6B", label: "3–5 min" },
+  { max: 1200,     color: "#8FBCAC", label: "5–15 min" },
+  { max: Infinity, color: "#D7E2DC", label: "&gt; 15 min" },      // farthest, lightest
+];
 function colorFor(m) {
-  if (m < 100)  return "#293B36";  // closest
-  if (m < 200)  return "#37534B";
-  if (m < 400)  return "#466D62";
-  if (m < 600)  return "#559180";
-  if (m < 1000) return "#78B0A0";
-  if (m < 1500) return "#A8C7BE";
-  if (m < 2500) return "#D0DDD9";
-  return "#E8EDEC";                 // farthest
+  for (const b of TIME_BUCKETS) if (m < b.max) return b.color;
+  return TIME_BUCKETS[TIME_BUCKETS.length - 1].color;
 }
-// Light text on the three darkest buckets; near-black on the rest (WCAG AA on every cell).
+// Light text on the two darkest buckets (< 5 min), near-black on the two lightest.
 function textColorFor(m) { return m < 400 ? "#E8EDEC" : "#0A1612"; }
-const M_PER_FT = 0.3048;
-const M_PER_MI = 1609.344;
-function formatDistance(meters) {
-  const miles = meters / M_PER_MI;
-  if (miles < 0.1) {
-    return `${Math.round((meters / M_PER_FT) / 10) * 10} ft`;
-  }
-  return `${(Math.ceil(miles * 10) / 10).toFixed(1)} mi`;
+function formatTime(m) {
+  const mins = Math.round(m / WALK_M_PER_MIN);
+  return mins < 1 ? "<1 min" : mins + " min";
+}
+// Exact distance for the hover tooltip: feet under 1/4 mile, miles (2 dp) above.
+function formatDistance(m) {
+  const ft = m * 3.28084;
+  if (ft < 1320) return Math.round(ft / 10) * 10 + " ft";
+  return (m / 1609.344).toFixed(2) + " mi";
 }
 
 const grid = document.getElementById("heatmap");
 
-function makeHeader(text, cls) {
+// sort state: descending (highest first) by default, starting on Reports (= rank order)
+let sortKey = "reports", sortDir = -1;
+function valueFor(s, key) {
+  if (key === "label") return s.label.toLowerCase();
+  return s[key];                       // reports or a utility distance (numbers)
+}
+function sortedSites() {
+  return sites.slice().sort((a, b) => {
+    const va = valueFor(a, sortKey), vb = valueFor(b, sortKey);
+    if (va < vb) return -sortDir;
+    if (va > vb) return sortDir;
+    return 0;
+  });
+}
+
+function makeHeader(text, cls, key) {
   const el = document.createElement("div");
   el.className = "cell h " + cls;
   el.setAttribute("role", "columnheader");
-  el.textContent = text;
+  el.innerHTML = text + (sortKey === key ? ` <span class="arrow">${sortDir === -1 ? "▼" : "▲"}</span>` : "");
+  el.addEventListener("click", () => {
+    if (sortKey === key) sortDir *= -1;        // toggle direction
+    else { sortKey = key; sortDir = -1; }       // new column -> highest first
+    render();
+  });
   return el;
 }
-grid.append(
-  makeHeader("Site",    "h-label"),
-  makeHeader("Reports", "h-reports"),
-  ...UTILS.map(u => makeHeader(u, "h-util"))
-);
 
-sites.forEach((s, i) => {
-  const rowId = "r" + i;
+function render() {
+  grid.innerHTML = "";
+  grid.appendChild(makeHeader("Site", "h-label", "label"));
+  grid.appendChild(makeHeader("Reports", "h-reports", "reports"));
+  UTILS.forEach(u => grid.appendChild(makeHeader(u, "h-util", u)));
 
-  const labelCell = document.createElement("div");
-  labelCell.className = "cell label-cell";
-  labelCell.dataset.row = rowId;
-  labelCell.setAttribute("role", "cell");
-  labelCell.innerHTML =
-    '<span class="rank">' + String(s.rank).padStart(2, "0") + '</span>' +
-    '<span class="name">' + s.label + '</span>';
-  grid.appendChild(labelCell);
+  sortedSites().forEach((s, i) => {
+    const rowId = "r" + i;
 
-  const reportsCell = document.createElement("div");
-  reportsCell.className = "cell reports-cell";
-  reportsCell.dataset.row = rowId;
-  reportsCell.setAttribute("role", "cell");
-  reportsCell.textContent = s.reports.toLocaleString();
-  grid.appendChild(reportsCell);
+    const labelCell = document.createElement("div");
+    labelCell.className = "cell label-cell";
+    labelCell.dataset.row = rowId;
+    labelCell.setAttribute("role", "cell");
+    labelCell.innerHTML =
+      '<span class="rank">' + String(s.rank).padStart(2, "0") + '</span>' +
+      '<span class="name">' + s.label + '</span>';
+    grid.appendChild(labelCell);
 
-  UTILS.forEach(u => {
-    const m = s[u];
-    const cell = document.createElement("div");
-    cell.className = "cell util-cell";
-    cell.dataset.row = rowId;
-    cell.style.background = colorFor(m);
-    cell.style.color = textColorFor(m);
-    cell.setAttribute("role", "cell");
-    cell.textContent = formatDistance(m);
-    grid.appendChild(cell);
+    const reportsCell = document.createElement("div");
+    reportsCell.className = "cell reports-cell";
+    reportsCell.dataset.row = rowId;
+    reportsCell.setAttribute("role", "cell");
+    reportsCell.textContent = s.reports.toLocaleString();
+    grid.appendChild(reportsCell);
+
+    UTILS.forEach(u => {
+      const m = s[u];
+      const cell = document.createElement("div");
+      cell.className = "cell util-cell";
+      cell.dataset.row = rowId;
+      cell.style.background = colorFor(m);
+      cell.style.color = textColorFor(m);
+      cell.setAttribute("role", "cell");
+      cell.dataset.dist = u + ": " + formatDistance(m);   // exact distance for hover tooltip
+      cell.textContent = formatTime(m);
+      grid.appendChild(cell);
+    });
   });
-});
+}
 
-// Row hover: shared class applied to all cells with the same data-row
+// legend
+document.getElementById("legend").innerHTML = TIME_BUCKETS.map(b =>
+  `<span class="key"><i style="background:${b.color}"></i>${b.label}</span>`).join("");
+
+render();
+
+// Row hover (delegated on the grid; survives re-renders)
 grid.addEventListener("mouseover", e => {
   const cell = e.target.closest(".cell[data-row]");
   if (!cell) return;
-  const row = cell.dataset.row;
-  grid.querySelectorAll('.cell[data-row="' + row + '"]').forEach(c => c.classList.add("row-hover"));
+  grid.querySelectorAll('.cell[data-row="' + cell.dataset.row + '"]').forEach(c => c.classList.add("row-hover"));
 });
 grid.addEventListener("mouseout", e => {
   const cell = e.target.closest(".cell[data-row]");
   if (!cell) return;
-  const row = cell.dataset.row;
-  grid.querySelectorAll('.cell[data-row="' + row + '"]').forEach(c => c.classList.remove("row-hover"));
+  grid.querySelectorAll('.cell[data-row="' + cell.dataset.row + '"]').forEach(c => c.classList.remove("row-hover"));
 });
+
+// Floating tooltip with the exact distance, following the cursor over utility cells
+const tip = document.createElement("div");
+tip.className = "tip";
+document.body.appendChild(tip);
+grid.addEventListener("mousemove", e => {
+  const cell = e.target.closest(".util-cell[data-dist]");
+  if (cell) {
+    tip.textContent = cell.dataset.dist;
+    tip.style.left = e.clientX + "px";
+    tip.style.top = (e.clientY - 10) + "px";
+    tip.style.opacity = "1";
+  } else {
+    tip.style.opacity = "0";
+  }
+});
+grid.addEventListener("mouseleave", () => { tip.style.opacity = "0"; });
 </script>
 </body>
 </html>
